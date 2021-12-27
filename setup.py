@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from setuptools import setup, find_packages
+
 try:
     from pipenv.project import Project
     from pipenv.utils import convert_deps_to_pip
@@ -24,7 +25,6 @@ readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 version = open('.VERSION').read()
 
-
 setup(
     name='''awsapicli''',
     version=version,
@@ -34,26 +34,25 @@ setup(
     author_email='''ctyfoxylos@schubergphilis.com''',
     url='''https://github.com/schubergphilis/awsapicli.git''',
     packages=find_packages(where='.', exclude=('tests', 'hooks', '_CI*')),
-    package_dir={'''awsapicli''':
-                 '''awsapicli'''},
+    package_dir={'''awsapicli''': '''awsapicli'''},
     include_package_data=True,
     install_requires=requirements,
     license='MIT',
     zip_safe=False,
     keywords='''awsapicli aws api''',
-    entry_points = {
-                   'console_scripts': [
-                       # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
-                       #  awsapicli.awsapicli:main method
-                       # 'myscript = awsapicli.awsapicli:main'
-                   ]},
+    entry_points={
+        'console_scripts': [
+            # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
+            #  awsapicli.awsapicli:main method
+            'aws-account-lifecycle = cli:main'
+        ]},
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Natural Language :: English',
         'Programming Language :: Python :: 3.7',
-        ],
+    ],
     test_suite='tests',
     tests_require=test_requirements
 )
