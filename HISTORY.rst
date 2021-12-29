@@ -25,3 +25,9 @@ History
 ------------------
 
 * Linted code.
+
+
+0.1.3 (29-12-2021)
+------------------
+
+* Bumped dependencies for a fix on account creation.
