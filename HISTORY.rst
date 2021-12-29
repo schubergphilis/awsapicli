@@ -19,3 +19,9 @@ History
 ------------------
 
 * Disabled Iterm solver since the rendering does not work with the rich framework.
+
+
+0.1.2 (29-12-2021)
+------------------
+
+* Linted code.
