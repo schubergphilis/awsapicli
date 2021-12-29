@@ -34,9 +34,9 @@ Import all parts from actions here
 
 from art import text2art
 from awsapilib.console import (AccountManager,
-                               PasswordManager,
-                               UnableToResolveAccount,
-                               UnableToRequestResetPassword)
+                               PasswordManager)
+from awsapilib.console.consoleexceptions import (UnableToResolveAccount,
+                                                 UnableToRequestResetPassword)
 from opnieuw import retry
 from rich.console import Console
 from rich.text import Text
