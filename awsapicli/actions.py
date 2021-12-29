@@ -33,6 +33,7 @@ Import all parts from actions here
 """
 
 from art import text2art
+from awsapilib.captcha import Terminal
 from awsapilib.console import (AccountManager,
                                PasswordManager)
 from awsapilib.console.consoleexceptions import (UnableToResolveAccount,
@@ -67,8 +68,7 @@ def get_account_manager_arguments(options):
             'region': options.get('region'),
             'mfa_serial': options.get('mfa_serial')}
     solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    args['solver'] = solver if solver else Terminal()
     return args
 
 
@@ -76,8 +76,7 @@ def get_password_manager_arguments(options):
     """Prepares the standard arguments for password manager actions."""
     args = {}
     solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    args['solver'] = solver if solver else Terminal()
     return args
 
 

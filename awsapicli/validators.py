@@ -34,6 +34,7 @@ Import all parts from validation here
 
 import re
 import string
+import random
 
 import click
 from awsapilib import ControlTower
@@ -49,13 +50,38 @@ __email__ = '''<ctyfoxylos@schubergphilis.com>'''
 __status__ = '''Development'''  # "Prototype", "Development", "Production".
 
 
+ACCOUNT_NAME_MAXIMUM_LENGTH = 50
+ACCOUNT_EMAIL_MINIMUM_LENGTH = 6
+ACCOUNT_EMAIL_MAXIMUM_LENGTH = 64
+
+
+def generate_random_string(length):
+    pool = string.ascii_letters + string.digits
+    return ''.join(random.choice(pool) for _ in range(length))
+
+
+def get_random_account_name(account_name):
+    length = ACCOUNT_NAME_MAXIMUM_LENGTH - len(account_name)
+    if not length > 2:
+        raise ValueError('Name is too long to generate a random name for it.')
+    return account_name + generate_random_string(length)
+
+
+def get_random_account_email(account_email):
+    length = ACCOUNT_EMAIL_MAXIMUM_LENGTH - len(account_email)
+    if not length > 2:
+        raise ValueError('Email is too long to generate a new random one for it.')
+    host, domain = account_email.split('@')
+    return f'{host}+{generate_random_string(length-1)}@{domain}'
+
+
 def validate_email(ctx, param, value):
     """Validates an email option."""
     if not value:
         return value
     try:
         if not all([re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", value),
-                    6 <= len(value) <= 64]):
+                    ACCOUNT_EMAIL_MINIMUM_LENGTH <= len(value) <= ACCOUNT_EMAIL_MAXIMUM_LENGTH]):
             raise ValueError(value)
         return value
     except ValueError as msg:
@@ -116,7 +142,7 @@ def validate_reset_link(ctx, param, value):  # pylint: disable=unused-argument
 def validate_account_name(ctx, param, value):
     """Validates an account name."""
     try:
-        if not all([re.match(r"[\s\S]*", value), 1 <= len(value) <= 50]):
+        if not all([re.match(r"[\s\S]*", value), 1 <= len(value) <= ACCOUNT_NAME_MAXIMUM_LENGTH]):
             raise ValueError(value)
         return value
     except ValueError:
