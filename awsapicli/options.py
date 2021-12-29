@@ -39,7 +39,11 @@ from click_option_group import MutuallyExclusiveOptionGroup
 
 from .validators import (validate_email,
                          validate_region,
-                         validate_token)
+                         validate_token,
+                         validate_account_name,
+                         validate_account_password,
+                         validate_mfa_device_name,
+                         validate_mfa_device_serial)
 
 __author__ = '''Costas Tyfoxylos <ctyfoxylos@schubergphilis.com>'''
 __docformat__ = '''google'''
@@ -63,8 +67,19 @@ device_name_option = click.option('-d',
                                   '--device-name',
                                   'device_name',
                                   required=True,
+                                  default='root-account-mfa-device',
                                   type=str,
+                                  callback=validate_mfa_device_name,
                                   help='The name of the virtual device. Defaults to "root-account-mfa-device"')
+
+device_serial_option = click.option('-d',
+                                    '--device-serial',
+                                    'device_serial',
+                                    required=True,
+                                    type=str,
+                                    callback=validate_mfa_device_serial,
+                                    help='The serial of the virtual device in the form'
+                                         ' of arn:aws:iam::ACCOUNTID:mfa/DEVICE_NAME.')
 
 password_option = click.option('-p',
                                '--password',
@@ -74,6 +89,7 @@ password_option = click.option('-p',
                                confirmation_prompt=True,
                                required=True,
                                type=str,
+                               callback=validate_account_password,
                                help='The root password of the account.')
 
 region_option = click.option('-r',
@@ -100,6 +116,7 @@ account_name_option = click.option('-n',
                                    'account_name',
                                    required=True,
                                    type=str,
+                                   callback=validate_account_name,
                                    help='The name of the account.')
 
 

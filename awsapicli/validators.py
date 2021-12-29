@@ -33,6 +33,7 @@ Import all parts from validation here
 """
 
 import re
+import string
 
 import click
 from awsapilib import ControlTower
@@ -53,11 +54,13 @@ def validate_email(ctx, param, value):
     if not value:
         return value
     try:
-        if not re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", value):
+        if not all([re.match(r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)", value),
+                    6 <= len(value) <= 64]):
             raise ValueError(value)
         return value
     except ValueError as msg:
-        click.echo(f'Incorrect {param.name} given: {msg}')
+        click.echo(f'Incorrect email given, it must be a valid email'
+                   f' between 6 and 64 characters: {msg}')
         value = click.prompt(param.name)
         return validate_email(ctx, param, value)
 
@@ -108,3 +111,70 @@ def validate_reset_link(ctx, param, value):  # pylint: disable=unused-argument
     if not value.startswith(valid_prefix):
         raise click.BadParameter('The reset link provided is not valid.')
     return value
+
+
+def validate_account_name(ctx, param, value):
+    """Validates an account name."""
+    try:
+        if not all([re.match(r"[\s\S]*", value), 1 <= len(value) <= 50]):
+            raise ValueError(value)
+        return value
+    except ValueError:
+        click.echo('Invalid account name given, only ASCII characters are allowed with a length between 1 and 50.')
+        value = click.prompt(param.name)
+        return validate_account_name(ctx, param, value)
+
+
+def validate_account_password(ctx, param, value):
+    """Validates an account password."""
+    lower = set(string.ascii_lowercase)
+    upper = set(string.ascii_uppercase)
+    digits = set(string.digits)
+    punctuation_string = '! @ # $ % ^ & * ( ) < > [ ] { } | _ + - ='
+    punctuation = set(punctuation_string.split())
+    all_characters = set(string.ascii_lowercase +
+                         string.ascii_uppercase +
+                         string.digits +
+                         punctuation_string.replace(' ', ''))
+    try:
+        matches = [int(bool(group.intersection(value))) for group in (lower, upper, digits, punctuation)]
+        conditions = [sum(matches) >= 3,
+                      8 <= len(value) <= 128,
+                      all_characters.issuperset(set(value))]
+        if not all(conditions):
+            raise ValueError
+        return value
+    except ValueError:
+        print(f'Invalid password provided, password should be ascii lower, upper and digits and one of '
+              f'{punctuation_string} and it should match at least three of these categories and be between 8 and 128 '
+              f'characters.')
+        value = click.prompt(param.name)
+        return validate_account_password(ctx, param, value)
+
+
+def validate_mfa_device_name(ctx, param, value):
+    """Validates a virtual MFA device name."""
+    try:
+        if not all([re.match(r"[\w+=/:,.@-]+", value), 9 <= len(value) <= 256]):
+            raise ValueError(value)
+        return value
+    except ValueError:
+        click.echo('Invalid device name given, only ASCII characters and + = / : , . @ - are allowed with a length '
+                   'between 9 and 256 with no spaces.')
+        value = click.prompt(param.name)
+        return validate_mfa_device_name(ctx, param, value)
+
+
+def validate_mfa_device_serial(ctx, param, value):
+    """Validates a reset link."""
+    conditions = [value.startswith('arn:aws:iam::'),
+                  value[13:25].isnumeric(),
+                  value[25:30] == ':mfa/']
+    try:
+        if not all(conditions):
+            raise ValueError(value)
+        return value
+    except ValueError as msg:
+        click.echo(f'Incorrect {param.name} given: {msg}')
+        value = click.prompt(param.name)
+        return validate_mfa_device_serial(ctx, param, value)

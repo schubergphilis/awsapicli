@@ -31,23 +31,39 @@ Main code for awsapicli.
 
 """
 
+import io
 import json
 import logging
 import logging.config
 
 import click
-import click_spinner
 import coloredlogs
-
+import pyotp
+import qrcode
 from awsapilib import ControlTower
-from awsapilib.console import (PasswordManager,
-                               UnableToRequestResetPassword,
-                               UnableToResetPassword,
-                               AccountManager,
-                               InvalidAuthentication,
-                               UnableToDisableVirtualMFA)
-from awsapilib.controltower import InvalidParentHierarchy, NonExistentOU, ControlTowerBusy
 from awsapilib.authentication import InvalidCredentials
+from awsapilib.console import (UnableToRequestResetPassword,
+                               UnableToResetPassword,
+                               InvalidAuthentication,
+                               UnableToDisableVirtualMFA,
+                               UnableToEnableVirtualMFA,
+                               NoMFAProvided,
+                               VirtualMFADeviceExists)
+from awsapilib.controltower import (InvalidParentHierarchy,
+                                    NonExistentOU,
+                                    ControlTowerBusy,
+                                    EmailInUse)
+from rich.console import Console
+
+from .actions import (show_header,
+                      update_account_name,
+                      update_account_email,
+                      terminate_account,
+                      activate_iam_billing,
+                      deactivate_mfa,
+                      activate_mfa,
+                      password_reset,
+                      password_reset_request)
 from .options import (common_options,
                       common_account_manager_options,
                       account_name_option,
@@ -55,7 +71,8 @@ from .options import (common_options,
                       device_name_option,
                       password_option,
                       region_option,
-                      captcha_option)
+                      captcha_option,
+                      device_serial_option)
 from .validators import (validate_arn,
                          validate_email,
                          validate_reset_link)
@@ -88,6 +105,7 @@ def setup_logging(options):
 
 
     """
+    show_header()
     config_file = options.pop('log_config')
     log_level = options.pop('log_level')
     # This will configure the logging, if the user has set a config file.
@@ -182,26 +200,31 @@ def create(**options):
     setup_logging(options)
     arn = options.pop('arn')
     region = options.pop('region')
-    click.echo('Trying to authenticate to Control Tower.')
+    console = Console()
     try:
-        with click_spinner.spinner():
+        message = 'Authenticating to Control Tower'
+        with console.status(f'[bold green]{message}'):
             tower = ControlTower(arn, region)
     except InvalidCredentials:
-        click.echo('Unable to authenticate to Control Tower, credentials were either not provided, '
-                   'were wrong, or expired')
+        LOGGER.error('Unable to authenticate to Control Tower, credentials were either not provided, '
+                     'were wrong, or expired, or role ARN is not correct.')
         raise SystemExit(1)
-    click.echo('Trying to create requested account.')
     try:
-        with click_spinner.spinner():
+        message = 'Creating account with provided arguments'
+        with console.status(f'[bold green]{message}'):
             result = tower.create_account(**filter_set_options(options))
+    except EmailInUse:
+        LOGGER.error(f'Email {options.get("account_email")} is already is use in AWS and cannot be used to create a new '
+                     f'account.')
+        raise SystemExit(1)
     except ControlTowerBusy:
-        click.echo('Control Tower is busy, please try again in a while')
+        LOGGER.error('Control Tower is busy, please try again in a while')
         raise SystemExit(1)
     except (NonExistentOU, InvalidParentHierarchy) as msg:
-        click.echo(f'Failed to create account with error: {msg}')
+        LOGGER.error(f'Failed to create account with error: {msg}')
         raise SystemExit(1)
     report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} to create account {options.get("account_name")}')
+    LOGGER.info(f'{report_message} to create account {options.get("account_name")}')
     raise SystemExit(int(not result))
 
 
@@ -212,25 +235,18 @@ def create(**options):
 def update_name(**options):
     """Update the name of an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    args = {'email': account_email,
-            'password': options.get('password'),
-            'region': options.get('region'),
-            'mfa_serial': options.get('mfa_serial')}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
     try:
-        click.echo(f'Please wait updating the name of account {account_email}')
-        with click_spinner.spinner():
-            account_manager = AccountManager(**args)
-            result = account_manager.update_account_name(options.get('account_name'))
-    except InvalidAuthentication as msg:
-        click.echo(f'Unable to rename account, failed with message {msg}')
+        with console.status('[bold green]Updating account name.'):
+            result = update_account_name(options, console)
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} in renaming account {account_email}')
-    raise SystemExit(int(not result))
+    except InvalidAuthentication as msg:
+        LOGGER.error(f'Unable to rename account, failed with message {msg}')
+        raise SystemExit(1)
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
@@ -246,25 +262,18 @@ def update_name(**options):
 def update_email(**options):
     """Update the email of an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    args = {'email': account_email,
-            'password': options.get('password'),
-            'region': options.get('region'),
-            'mfa_serial': options.get('mfa_serial')}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
     try:
-        click.echo(f'Please wait updating the email of account {account_email}')
-        with click_spinner.spinner():
-            account_manager = AccountManager(**args)
-            result = account_manager.update_account_email(options.get('new_account_email'))
-    except InvalidAuthentication as msg:
-        click.echo(f'Unable to update email of account, failed with message {msg}')
+        with console.status('[bold green]Updating account email.'):
+            result = update_account_email(options, console)
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} in updating email of account {account_email}')
-    raise SystemExit(int(not result))
+    except InvalidAuthentication as msg:
+        LOGGER.error(f'Unable to update email of account, failed with message {msg}')
+        raise SystemExit(1)
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
@@ -273,72 +282,54 @@ def update_email(**options):
 def terminate(**options):
     """Terminate (suspend for 90 days first) an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    args = {'email': account_email,
-            'password': options.get('password'),
-            'region': options.get('region'),
-            'mfa_serial': options.get('mfa_serial')}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
     try:
-        click.echo(f'Please wait while terminating account {account_email}')
-        with click_spinner.spinner():
-            account_manager = AccountManager(**args)
-            result = account_manager.terminate_account()
-    except InvalidAuthentication as msg:
-        click.echo(f'Unable to authenticate as root, failed with message {msg}')
+        with console.status('[bold green]Terminating account.'):
+            result = terminate_account(options, console)
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} in terminating account {account_email}')
-    raise SystemExit(int(not result))
+    except InvalidAuthentication as msg:
+        LOGGER.error(f'Unable to authenticate as root, failed with message {msg}')
+        raise SystemExit(1)
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
 @common_options
 @email_option
 @captcha_option
-def password_request_reset(**options):
+def request_password_reset(**options):
     """Request a password reset for an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    args = {}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
     try:
-        click.echo(f'Please wait while requesting password reset for account {account_email}')
-        with click_spinner.spinner():
-            password_manager = PasswordManager(**args)
-            result = password_manager.request_password_reset(account_email)
+        with console.status('[bold green]Requesting password reset.'):
+            result = password_reset_request(options, console)
     except UnableToRequestResetPassword as msg:
-        click.echo(f'Unable to request password reset, failed with message {msg}')
+        LOGGER.error(f'Unable to request password reset, failed with message {msg}')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} to request password reset for account {account_email}')
-    raise SystemExit(int(not result))
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
 @common_options
 @click.option('-r', '--reset-url', 'reset_url', required=True, type=str, prompt=True, callback=validate_reset_link)
 @password_option
-def password_reset(**options):
+def reset_password(**options):
     """Reset the password of an account."""
     setup_logging(options)
-    args = {}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
-    password_manager = PasswordManager(**args)
+    console = Console()
     try:
-        result = password_manager.reset_password(options.get('reset_url'), options.get('password'))
+        with console.status('[bold green]Resetting password.'):
+            result = password_reset(options, console)
     except UnableToResetPassword as msg:
-        click.echo(f'Unable to reset password, failed with message {msg}')
+        LOGGER.error(f'Unable to reset password, failed with message {msg}')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} in resetting password.')
-    raise SystemExit(int(not result))
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
@@ -348,46 +339,64 @@ def password_reset(**options):
 def mfa_activate(**options):
     """Activate virtual MFA on an account."""
     setup_logging(options)
-    # account_manager = AccountManager(email, password, region, mfa_serial, solver=solver)
-    # account_manager.mfa.delete_virtual_mfa(device.serial_number)
-    # import io
-    # import qrcode
-    # qr = qrcode.QRCode()
-    # qr.add_data("Some text")
-    # f = io.StringIO()
-    # qr.print_ascii(out=f)
-    # f.seek(0)
-    # print(f.read())
-    click.echo(options)
+    console = Console()
+    device_name = options.get('device_name')
+    account_email = options.get('account_email')
+    try:
+        message = f'Activating virtual MFA for account {account_email} with name {device_name}. ' \
+                  'This will take some time as two consecutive TOTP passwords are required.'
+        with console.status(f'[bold green]{message}'):
+            device = activate_mfa(options, console)
+            account_id = device.serial.split(':')[4]
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
+        raise SystemExit(1)
+    except InvalidAuthentication:
+        LOGGER.error('Account manager could not authenticate.')
+        raise SystemExit(1)
+    except VirtualMFADeviceExists:
+        LOGGER.error('Virtual MFA device is already activated, you cannot have more that one virtual device activated.')
+        raise SystemExit(1)
+    except UnableToEnableVirtualMFA as msg:
+        LOGGER.error(f'Unable to enable virtual MFA device, failed with message {msg}')
+        raise SystemExit(1)
+    LOGGER.info(f'Activated virtual MFA device {device.serial} with seed {device.seed}, '
+                'please keep it somewhere safe.')
+    data = pyotp.totp.TOTP(device.seed).provisioning_uri(name=f'{device_name}@{account_id}',
+                                                         issuer_name='Amazon Web Services')
+    qr_code = qrcode.QRCode()
+    qr_code.add_data(data)
+    qr_file = io.StringIO()
+    qr_code.print_ascii(out=qr_file)
+    qr_file.seek(0)
+    print(qr_file.read())
+    raise SystemExit(0)
 
 
 @account.command()
 @common_options
 @common_account_manager_options
-@device_name_option
+@device_serial_option
 def mfa_deactivate(**options):
     """Deactivate virtual MFA on an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    device_name = options.get('device_name')
-    args = {'email': account_email,
-            'password': options.get('password'),
-            'region': options.get('region'),
-            'mfa_serial': options.get('mfa_serial')}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
+    device_serial = options.get('device_serial')
     try:
-        click.echo(f'Please wait while deleting MFA device {device_name}')
-        with click_spinner.spinner():
-            account_manager = AccountManager(**args)
-            result = account_manager.mfa.delete_virtual_device(device_name)
-    except (InvalidAuthentication, UnableToDisableVirtualMFA) as msg:
-        click.echo(f'Unable to delete MFA device {device_name}, failed with message {msg}')
+        message = 'Deactivating MFA device.'
+        with console.status(f'[bold green]{message}'):
+            result = deactivate_mfa(options, console)
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
-    report_message = 'Succeeded' if result else 'Failed'
-    click.echo(f'{report_message} in deleting MFA device {device_name}')
-    raise SystemExit(int(not result))
+    except InvalidAuthentication:
+        LOGGER.error('Account manager could not authenticate.')
+        raise SystemExit(1)
+    except UnableToDisableVirtualMFA as msg:
+        LOGGER.error(f'Unable to delete MFA device {device_serial}, failed with message {msg}')
+        raise SystemExit(1)
+    exit_status = int(not result)
+    raise SystemExit(exit_status)
 
 
 @account.command()
@@ -396,23 +405,16 @@ def mfa_deactivate(**options):
 def billing_iam_activate(**options):
     """Activate IAM access to billing console on an account."""
     setup_logging(options)
-    account_email = options.get("account_email")
-    args = {'email': account_email,
-            'password': options.get('password'),
-            'region': options.get('region'),
-            'mfa_serial': options.get('mfa_serial')}
-    solver = options.get('solver')
-    if solver:
-        args['solver'] = solver
+    console = Console()
     try:
-        click.echo(f'Please wait while activating IAM access in account {account_email}')
-        with click_spinner.spinner():
-            account_manager = AccountManager(**args)
-            account_manager.iam.billing_console_access = True
-    except InvalidAuthentication as msg:
-        click.echo(f'Unable activate IAM access, failed with message {msg}')
+        message = 'Activating IAM access under billing console'
+        with console.status(f'[bold green]{message}'):
+            result = activate_iam_billing(options, console)
+    except NoMFAProvided:
+        LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
-    report_message = 'Succeeded' if account_manager.iam.billing_console_access else 'Failed'
-    exit_status = int(not account_manager.iam.billing_console_access)
-    click.echo(f'{report_message} in activating IAM access in account {account_email}')
+    except InvalidAuthentication as msg:
+        LOGGER.error(f'Unable activate IAM access, failed with message {msg}')
+        raise SystemExit(1)
+    exit_status = int(not result)
     raise SystemExit(exit_status)

@@ -44,7 +44,7 @@ setup(
         'console_scripts': [
             # enable this to automatically generate a script in /usr/local/bin called myscript that points to your
             #  awsapicli.awsapicli:main method
-            'aws-account-lifecycle = cli:main'
+            'aws-account-lifecycle = awsapicli.awsapicli:account'
         ]},
     classifiers=[
         'Development Status :: 4 - Beta',
