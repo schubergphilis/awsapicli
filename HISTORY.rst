@@ -13,3 +13,9 @@ History
 ------------------
 
 * Initial release
+
+
+0.1.1 (29-12-2021)
+------------------
+
+* Disabled Iterm solver since the rendering does not work with the rich framework.
