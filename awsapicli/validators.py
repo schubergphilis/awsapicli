@@ -56,11 +56,13 @@ ACCOUNT_EMAIL_MAXIMUM_LENGTH = 64
 
 
 def generate_random_string(length):
+    """Generates a random string according to the length provided."""
     pool = string.ascii_letters + string.digits
     return ''.join(random.choice(pool) for _ in range(length))
 
 
 def get_random_account_name(account_name):
+    """Generates a random name up to the maximum size allowed."""
     length = ACCOUNT_NAME_MAXIMUM_LENGTH - len(account_name)
     if not length > 2:
         raise ValueError('Name is too long to generate a random name for it.')
@@ -68,6 +70,7 @@ def get_random_account_name(account_name):
 
 
 def get_random_account_email(account_email):
+    """Generates a random email up to the maximum size allowed."""
     length = ACCOUNT_EMAIL_MAXIMUM_LENGTH - len(account_email)
     if not length > 2:
         raise ValueError('Email is too long to generate a new random one for it.')
