@@ -7,7 +7,7 @@
 #
 # Please use Pipfile to update the requirements.
 #
-awsapilib~=2.0.2
+awsapilib~=2.1.0
 click~=8.0.3
 click-option-group~=0.5.3
 coloredlogs~=15.0.1

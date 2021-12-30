@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "58b3d56f4e5e879d939941bff2aeb86302de62a61e3d6a81cdc3038923bfd71e"
+            "sha256": "553ccd42a72586caead3cb74a326a227e217db09ba0cadc01ab7d1f7ea53adb2"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -32,11 +32,11 @@
         },
         "awsapilib": {
             "hashes": [
-                "sha256:12692c24c5dc96cc242b003eadc8229294083cffde84af45f0aedb5d6cdc5817",
-                "sha256:8178053080db527177cb29fbd1eeb0ad1047b94ff2177ffb9d13496eee7aa380"
+                "sha256:a7dba862aa1f2f58453c7cee090111f74e4780b056b16c428b64223c52b55523",
+                "sha256:b046c4862f45cdfd54333496342d578e3a90ac233531c3ead57e22dde9652572"
             ],
             "index": "pypi",
-            "version": "==2.0.2"
+            "version": "==2.1.0"
         },
         "beautifulsoup4": {
             "hashes": [
@@ -255,7 +255,7 @@
                 "sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece",
                 "sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_full_version < '4.0.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
             "version": "==1.26.7"
         },
         "zipp": {
@@ -988,7 +988,7 @@
                 "sha256:4987c65554f7a2dbf30c18fd48778ef124af6fab771a377103da0585e2336ece",
                 "sha256:c4fdf4019605b6e5423637e01bc9fe4daef873709a7973e195ceba0a62bbc844"
             ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_full_version < '4.0.0'",
+            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
             "version": "==1.26.7"
         },
         "virtualenv": {
