@@ -32,11 +32,11 @@
         },
         "awsapilib": {
             "hashes": [
-                "sha256:436de823754cd65ea27f216ed1f0d3e9d92e2e9e1be19ca6956a0775c1686cb6",
-                "sha256:84ff787b7e4f8359aff80467dd067ee7b234845ce31573487c6756d345b4a1f2"
+                "sha256:12692c24c5dc96cc242b003eadc8229294083cffde84af45f0aedb5d6cdc5817",
+                "sha256:8178053080db527177cb29fbd1eeb0ad1047b94ff2177ffb9d13496eee7aa380"
             ],
             "index": "pypi",
-            "version": "==2.0.1"
+            "version": "==2.0.2"
         },
         "beautifulsoup4": {
             "hashes": [

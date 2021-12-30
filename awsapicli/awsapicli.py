@@ -414,7 +414,7 @@ def billing_iam_activate(**options):
         LOGGER.error('Account is protected by MFA but no seed was provided.')
         raise SystemExit(1)
     except InvalidAuthentication as msg:
-        LOGGER.error(f'Unable activate IAM access, failed with message {msg}')
+        LOGGER.error(f'Unable to activate IAM access, failed with message {msg}')
         raise SystemExit(1)
     exit_status = int(not result)
     raise SystemExit(exit_status)
