@@ -31,3 +31,9 @@ History
 ------------------
 
 * Bumped dependencies for a fix on account creation.
+
+
+0.1.4 (30-12-2021)
+------------------
+
+* Bumped dependencies and fixed typo.
