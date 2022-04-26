@@ -37,3 +37,9 @@ History
 ------------------
 
 * Bumped dependencies and fixed typo.
+
+
+0.1.5 (26-04-2022)
+------------------
+
+* Updated dependencies.
