@@ -43,3 +43,9 @@ History
 ------------------
 
 * Updated dependencies.
+
+
+0.1.6 (06-05-2022)
+------------------
+
+* Fixed IAM login workflow in dependency.
