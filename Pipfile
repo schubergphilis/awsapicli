@@ -22,7 +22,7 @@ emoji = "~=0.5.3"
 toml = "~=0.10.0"
 
 [packages]
-awsapilib = "~=2.2.0"
+awsapilib = "~=2.3.0"
 click = "~=8.0.3"
 click-option-group = "~=0.5.3"
 coloredlogs = "~=15.0.1"
